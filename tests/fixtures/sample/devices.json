@@ -1,0 +1,6 @@
+{"offset":0,"limit":200,"count":4,"totalCount":4,"data":[
+{"id":"dev-gw","name":"Dream Machine","model":"UDM-Pro","macAddress":"AA:BB:CC:00:00:01","ipAddress":"192.168.1.1","state":"ONLINE","features":["switching","gateway"],"firmwareVersion":"4.3.6","firmwareUpdatable":false},
+{"id":"dev-sw","name":"Switch Bureau","model":"USW-Lite-8-PoE","macAddress":"AA:BB:CC:00:00:02","ipAddress":"192.168.1.10","state":"ONLINE","features":["switching"],"firmwareVersion":"7.1.26","firmwareUpdatable":true},
+{"id":"dev-ap1","name":"AP Salon","model":"U6-Lite","macAddress":"AA:BB:CC:00:00:03","ipAddress":"192.168.1.20","state":"ONLINE","features":["accessPoint"],"firmwareVersion":"6.6.77","firmwareUpdatable":false},
+{"id":"dev-ap2","name":"AP Garage","model":"U6-Mesh","macAddress":"AA:BB:CC:00:00:04","ipAddress":"192.168.1.21","state":"OFFLINE","features":["accessPoint"],"firmwareVersion":"6.6.77","firmwareUpdatable":false}
+]}

@@ -1,0 +1,10 @@
+#!/bin/bash
+# Run every test suite. Exits non-zero if any fails.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+python3 -m unittest discover -s tests
+node --test tests/
+if command -v omarchy-plugin-validate >/dev/null; then
+  omarchy-plugin-validate . && echo "manifest: valid"
+fi

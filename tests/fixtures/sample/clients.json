@@ -1,0 +1,5 @@
+{"offset":0,"limit":200,"count":3,"totalCount":3,"data":[
+{"type":"WIRELESS","id":"cl-1","name":"laptop","connectedAt":"2026-09-27T08:00:00Z","ipAddress":"192.168.1.142","macAddress":"02:00:00:00:00:42","uplinkDeviceId":"dev-ap1","access":{"type":"DEFAULT"}},
+{"type":"WIRED","id":"cl-2","name":"NAS","connectedAt":"2026-09-20T08:00:00Z","ipAddress":"192.168.1.50","macAddress":"11:22:33:44:55:66","uplinkDeviceId":"dev-sw","access":{"type":"DEFAULT"}},
+{"type":"WIRELESS","id":"cl-3","name":"","connectedAt":"2026-09-27T10:00:00Z","ipAddress":"192.168.2.30","macAddress":"77:88:99:aa:bb:cc","uplinkDeviceId":"dev-ap1","access":{"type":"GUEST"}}
+]}

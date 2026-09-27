@@ -1,0 +1,4 @@
+{"meta":{"rc":"ok"},"data":[
+{"mac":"02:00:00:00:00:42","hostname":"laptop","essid":"HomeNet","ap_mac":"aa:bb:cc:00:00:03","signal":-58,"rssi":38,"channel":40,"satisfaction":96,"is_wired":false},
+{"mac":"77:88:99:aa:bb:cc","hostname":"guest-phone","essid":"HomeNet-Guest","ap_mac":"aa:bb:cc:00:00:03","signal":-71,"channel":1,"is_wired":false}
+]}

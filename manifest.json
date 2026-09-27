@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "vcanuel.unifi",
+  "name": "UniFi",
+  "version": "0.1.0",
+  "author": "Vincent Canuel",
+  "license": "MIT",
+  "description": "UniFi network health in the Omarchy bar: internet, this device's Wi-Fi, UniFi devices, and connected clients.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "UniFi",
+    "description": "Glance at your UniFi network: WAN status and public IP, the Wi-Fi and access point you are on, device health, and clients.",
+    "category": "Network",
+    "allowMultiple": true,
+    "defaultSection": "right",
+    "defaults": {
+      "profile": "default",
+      "refreshIntervalSec": 30,
+      "barLabel": "none",
+      "sections": ["wan", "self", "devices", "clients"],
+      "maxClients": 12,
+      "notify": true,
+      "deviceStats": true,
+      "legacyApi": true
+    },
+    "schema": [
+      { "key": "profile", "type": "string", "label": "Console profile (from `unifi setup`)", "defaultValue": "default" },
+      { "key": "refreshIntervalSec", "type": "integer", "label": "Refresh interval (seconds)", "min": 10, "max": 3600, "step": 5, "defaultValue": 30 },
+      { "key": "barLabel", "type": "enum", "label": "Text beside the icon", "options": ["none", "clients", "devices", "latency"], "defaultValue": "none" },
+      { "key": "sections", "type": "array", "label": "Panel sections, in order", "options": ["wan", "self", "devices", "clients"], "defaultValue": ["wan", "self", "devices", "clients"] },
+      { "key": "maxClients", "type": "integer", "label": "Clients listed before \"more\"", "min": 1, "max": 500, "defaultValue": 12 },
+      { "key": "notify", "type": "boolean", "label": "Notify when the network degrades or recovers", "defaultValue": true },
+      { "key": "deviceStats", "type": "boolean", "label": "Fetch per-device CPU, memory, and uptime", "defaultValue": true },
+      { "key": "legacyApi", "type": "boolean", "label": "Use controller endpoints for WAN and Wi-Fi details", "defaultValue": true }
+    ]
+  }
+}

@@ -121,6 +121,7 @@ class Collector:
             if client["uplinkId"] in devices_by_id:
                 devices_by_id[client["uplinkId"]]["clients"] += 1
         wan = normalize.parse_wan(health)
+        normalize.mark_gateway(devices, (wan or {}).get("gatewayMac", ""), (local or {}).get("gateway", ""))
         self_info = normalize.build_self(local, clients, stations_by_mac, devices)
 
         kind_order = {"gateway": 0, "console": 1, "switch": 2, "ap": 3, "other": 4}

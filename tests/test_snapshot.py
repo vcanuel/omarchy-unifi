@@ -135,6 +135,24 @@ class SnapshotTest(unittest.TestCase):
 
 
 class NormalizeTest(unittest.TestCase):
+    def test_gateway_found_by_gw_mac_even_without_feature(self):
+        devices = [normalize.normalize_device({"id": "a", "model": "Express 7", "macAddress": "94:2A:6F:00:00:01",
+                                               "features": ["switching", "accessPoint"]}),
+                   normalize.normalize_device({"id": "b", "model": "U7 Mesh", "features": ["accessPoint"]})]
+        devices[0]["kind"] = "ap"  # as an older heuristic would have left it
+        normalize.mark_gateway(devices, "94:2a:6f:00:00:01", "")
+        self.assertEqual([d["kind"] for d in devices], ["gateway", "ap"])
+
+    def test_gateway_falls_back_to_default_route(self):
+        devices = [normalize.normalize_device({"id": "a", "model": "Mystery", "ipAddress": "10.0.0.1"})]
+        normalize.mark_gateway(devices, "", "10.0.0.1")
+        self.assertEqual(devices[0]["kind"], "gateway")
+
+    def test_marketing_names(self):
+        self.assertEqual(normalize.device_kind({"model": "Express 7", "features": ["switching", "accessPoint"]}), "gateway")
+        self.assertEqual(normalize.device_kind({"model": "U7 Mesh"}), "ap")
+        self.assertEqual(normalize.device_kind({"model": "USW Flex 2.5G 8 PoE"}), "switch")
+
     def test_device_kind_heuristics(self):
         self.assertEqual(normalize.device_kind({"model": "UCG-Ultra", "features": ["switching"]}), "gateway")
         self.assertEqual(normalize.device_kind({"model": "U7-Pro"}), "ap")

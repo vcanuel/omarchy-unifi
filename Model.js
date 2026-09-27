@@ -24,6 +24,7 @@ var ICONS = {
   copy: String.fromCodePoint(0xF018F),
   open: String.fromCodePoint(0xF03CC),
   refresh: String.fromCodePoint(0xF0450),
+  speed: String.fromCodePoint(0xF04C5),       // md-speedometer
   down: String.fromCodePoint(0xF0045),
   up: String.fromCodePoint(0xF005D)
 }
@@ -188,7 +189,7 @@ function deviceSubtitle(device) {
   if (!device) return ""
   var parts = []
   if (device.state !== "online") parts.push(device.state.replace(/_/g, " "))
-  if (device.model) parts.push(device.model)
+  if (device.model && device.model !== device.name) parts.push(device.model)
   if (device.ip) parts.push(device.ip)
   if (device.clients > 0) parts.push(device.clients + (device.clients === 1 ? " client" : " clients"))
   var up = formatDuration(device.uptimeSec)

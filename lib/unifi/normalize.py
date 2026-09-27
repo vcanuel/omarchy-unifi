@@ -5,7 +5,10 @@ recorded fixtures. Field names on the raw side vary between Network versions,
 so every lookup tolerates a missing key.
 """
 
-GATEWAY_MODEL_PREFIXES = ("UDM", "UDR", "UDW", "UCG", "UXG", "USG", "UX", "EFG")
+# The API reports marketing names ("Express 7", "U7 Mesh") as often as SKUs
+# ("UDM-Pro"), so both spellings are listed. Spaces are stripped before matching.
+GATEWAY_MODEL_PREFIXES = ("UDM", "UDR", "UDW", "UCG", "UXG", "USG", "UX", "EFG",
+                          "EXPRESS", "DREAMMACHINE", "DREAMROUTER", "CLOUDGATEWAY", "GATEWAY")
 CONSOLE_MODEL_PREFIXES = ("UCK", "UNVR", "ENVR")
 AP_MODEL_PREFIXES = ("U6", "U7", "UAP", "UAL", "UWB", "E7", "UK-", "UBB")
 SWITCH_MODEL_PREFIXES = ("USW", "USL", "US-", "US8", "US16", "US24", "US48", "USF")
@@ -77,6 +80,26 @@ def client_display_name(raw, station=None):
             or raw.get("ipAddress") or raw.get("macAddress") or "Unknown client")
 
 
+def mark_gateway(devices, gateway_mac="", gateway_ip=""):
+    """Promote the device that is actually routing to kind "gateway".
+
+    Integration API features never say "gateway" (an Express 7 reports only
+    switching and accessPoint), so the controller's gw_mac, or failing that
+    the default route's next hop, is the reliable signal.
+    """
+    match = None
+    if gateway_mac:
+        match = next((d for d in devices if d["mac"] == gateway_mac), None)
+    if not match and gateway_ip:
+        match = next((d for d in devices if d["ip"] == gateway_ip), None)
+    if match:
+        for device in devices:
+            if device is not match and device["kind"] == "gateway":
+                device["kind"] = "other"
+        match["kind"] = "gateway"
+    return match
+
+
 def normalize_client(raw, devices_by_id, station=None):
     station = station or {}
     uplink = devices_by_id.get(str(raw.get("uplinkDeviceId") or ""))
@@ -132,6 +155,7 @@ def parse_wan(health):
         "isp": wan.get("isp_name") or wan.get("isp_organization") or "",
         "gatewayName": wan.get("gw_name") or "",
         "gatewayVersion": wan.get("gw_version") or "",
+        "gatewayMac": _lower(wan.get("gw_mac")),
         "latencyMs": latency,
         "availabilityPct": _num(uptime_stats.get("availability")),
         "rxBps": _bytes_rate_to_bps(wan.get("rx_bytes-r")),

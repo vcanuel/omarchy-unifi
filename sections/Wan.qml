@@ -34,7 +34,7 @@ Section {
 
     if (w.rxBps !== null || w.txBps !== null) {
       list.push({
-        icon: Model.ICONS.down,
+        icon: Model.ICONS.speed,
         title: Model.ICONS.down + " " + Model.formatBps(w.rxBps) + "   " + Model.ICONS.up + " " + Model.formatBps(w.txBps),
         subtitle: w.speedtest
           ? "Speed test " + Model.formatMbps(w.speedtest.downMbps) + " / " + Model.formatMbps(w.speedtest.upMbps)

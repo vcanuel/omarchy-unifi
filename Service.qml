@@ -51,7 +51,8 @@ Item {
     _stderr = ""
     refreshing = true
     var skip = Model.skipArgs(setting("deviceStats", true) !== false, setting("legacyApi", true) !== false)
-    statusProcess.command = [helperPath, "--profile", profile, "status"].concat(skip)
+    var demo = setting("demo", false) === true ? ["--demo"] : []
+    statusProcess.command = [helperPath, "--profile", profile, "status"].concat(demo).concat(skip)
     statusProcess.running = true
     watchdog.restart()
   }

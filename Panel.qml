@@ -195,6 +195,7 @@ Panel {
     function refresh(): string { service.refresh(); return "ok" }
     function status(): string { return root.health }
     function snapshot(): string { return JSON.stringify(service.snapshot) }
+    function settings(): string { return JSON.stringify(root.settings) }
   }
 
   readonly property string barText: Model.barLabel(snapshot, barLabelMode)

@@ -11,51 +11,15 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "lib"))
 
-from unifi import local, normalize  # noqa: E402
+from unifi import fixtures, local, normalize  # noqa: E402
 from unifi.errors import UnifiError  # noqa: E402
 from unifi.snapshot import SCHEMA, Collector  # noqa: E402
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures")
 
-PROFILE = {"url": "https://192.168.1.1", "site": "default", "tls": "pin",
-           "fingerprint": "sha256:00", "apiPrefix": "/proxy/network"}
-
-LOCAL = {"iface": "wlp2s0", "type": "wireless", "ip": "192.168.1.142", "gateway": "192.168.1.1",
-         "mac": "02:00:00:00:00:42", "ssid": "HomeNet", "signal": 73, "frequencyMhz": 5200,
-         "band": "5 GHz", "channel": 40, "bssid": "02:00:00:00:aa:01"}
-
-
-class FakeTransport:
-    """Serves fixture files by the last path segments of each request."""
-
-    ROUTES = [
-        ("/integration/v1/info", "info.json"),
-        ("/integration/v1/sites?", "sites.json"),
-        ("/devices?", "devices.json"),
-        ("/clients?", "clients.json"),
-        ("/stat/health", "health.json"),
-        ("/stat/sta", "stations.json"),
-    ]
-
-    def __init__(self, fixture_dir, fail=()):
-        self.dir = fixture_dir
-        self.fail = dict(fail)
-        self.requests = []
-
-    def get_json(self, path):
-        self.requests.append(path)
-        for needle, error in self.fail.items():
-            if needle in path:
-                raise error
-        if "/statistics/latest" in path:
-            device_id = path.split("/devices/")[1].split("/")[0]
-            name = "stats-%s.json" % device_id
-        else:
-            name = next((f for needle, f in self.ROUTES if needle in path), None)
-        if not name or not os.path.exists(os.path.join(self.dir, name)):
-            raise UnifiError("http", "%s returned HTTP 404" % path, 404)
-        with open(os.path.join(self.dir, name), encoding="utf-8") as handle:
-            return json.load(handle)
+PROFILE = fixtures.DEMO_PROFILE
+LOCAL = fixtures.load(os.path.join(FIXTURES, "sample"), "local.json")
+FakeTransport = fixtures.FixtureTransport
 
 
 def collect(fixture="sample", skip=(), fail=(), local_info=LOCAL):

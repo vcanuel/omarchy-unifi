@@ -18,7 +18,7 @@ from . import config
 from .api import IntegrationApi
 from .errors import UnifiError
 from .local import collect_local
-from .snapshot import SOURCES, build_snapshot
+from .snapshot import SOURCES, build_demo_snapshot, build_snapshot
 from .transport import Transport, fetch_fingerprint, split_url
 
 KEY_HELP = """\
@@ -37,7 +37,8 @@ def cmd_status(args):
     unknown = set(skip) - set(SOURCES)
     if unknown:
         raise SystemExit("unknown source to skip: %s (known: %s)" % (", ".join(sorted(unknown)), ", ".join(SOURCES)))
-    _dump(build_snapshot(args.profile, skip), args.pretty)
+    snapshot = build_demo_snapshot(skip) if args.demo else build_snapshot(args.profile, skip)
+    _dump(snapshot, args.pretty)
     return 0
 
 
@@ -233,6 +234,7 @@ def main(argv=None):
 
     status = sub.add_parser("status", help="print a JSON snapshot of the network")
     status.add_argument("--pretty", action="store_true", help="indent the JSON")
+    status.add_argument("--demo", action="store_true", help="made-up network from the sample fixtures")
     status.add_argument("--skip", help="comma-separated sources to skip: " + ", ".join(SOURCES))
     status.set_defaults(func=cmd_status)
 

@@ -22,21 +22,95 @@
       "profile": "default",
       "refreshIntervalSec": 30,
       "barLabel": "none",
-      "sections": ["wan", "self", "devices", "clients"],
+      "sections": [
+        "wan",
+        "self",
+        "devices",
+        "clients"
+      ],
       "maxClients": 12,
       "notify": true,
       "deviceStats": true,
-      "legacyApi": true
+      "legacyApi": true,
+      "demo": false
     },
     "schema": [
-      { "key": "profile", "type": "string", "label": "Console profile (from `unifi setup`)", "defaultValue": "default" },
-      { "key": "refreshIntervalSec", "type": "integer", "label": "Refresh interval (seconds)", "min": 10, "max": 3600, "step": 5, "defaultValue": 30 },
-      { "key": "barLabel", "type": "enum", "label": "Text beside the icon", "options": ["none", "clients", "devices", "latency"], "defaultValue": "none" },
-      { "key": "sections", "type": "array", "label": "Panel sections, in order", "options": ["wan", "self", "devices", "clients"], "defaultValue": ["wan", "self", "devices", "clients"] },
-      { "key": "maxClients", "type": "integer", "label": "Clients listed before \"more\"", "min": 1, "max": 500, "defaultValue": 12 },
-      { "key": "notify", "type": "boolean", "label": "Notify when the network degrades or recovers", "defaultValue": true },
-      { "key": "deviceStats", "type": "boolean", "label": "Fetch per-device CPU, memory, and uptime", "defaultValue": true },
-      { "key": "legacyApi", "type": "boolean", "label": "Use controller endpoints for WAN and Wi-Fi details", "defaultValue": true }
+      {
+        "key": "profile",
+        "type": "string",
+        "label": "Console profile (from `unifi setup`)",
+        "defaultValue": "default"
+      },
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 10,
+        "max": 3600,
+        "step": 5,
+        "defaultValue": 30
+      },
+      {
+        "key": "barLabel",
+        "type": "enum",
+        "label": "Text beside the icon",
+        "options": [
+          "none",
+          "clients",
+          "devices",
+          "latency"
+        ],
+        "defaultValue": "none"
+      },
+      {
+        "key": "sections",
+        "type": "array",
+        "label": "Panel sections, in order",
+        "options": [
+          "wan",
+          "self",
+          "devices",
+          "clients"
+        ],
+        "defaultValue": [
+          "wan",
+          "self",
+          "devices",
+          "clients"
+        ]
+      },
+      {
+        "key": "maxClients",
+        "type": "integer",
+        "label": "Clients listed before \"more\"",
+        "min": 1,
+        "max": 500,
+        "defaultValue": 12
+      },
+      {
+        "key": "notify",
+        "type": "boolean",
+        "label": "Notify when the network degrades or recovers",
+        "defaultValue": true
+      },
+      {
+        "key": "deviceStats",
+        "type": "boolean",
+        "label": "Fetch per-device CPU, memory, and uptime",
+        "defaultValue": true
+      },
+      {
+        "key": "legacyApi",
+        "type": "boolean",
+        "label": "Use controller endpoints for WAN and Wi-Fi details",
+        "defaultValue": true
+      },
+      {
+        "key": "demo",
+        "type": "boolean",
+        "label": "Show a made-up demo network (for screenshots and UI work)",
+        "defaultValue": false
+      }
     ]
   }
 }

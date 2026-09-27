@@ -3,6 +3,11 @@
 A bar widget for the [Omarchy](https://omarchy.org) shell that answers "is my
 UniFi network OK?" at a glance, with a keyboard-driven panel for details.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="UniFi panel open from the Omarchy bar, showing internet status, this device's Wi-Fi, and UniFi devices with one access point offline" width="406">
+</p>
+<p align="center"><sub>Demo data (<code>"demo": true</code>)</sub></p>
+
 - **Bar icon** turns urgent when something is wrong, dims when the console is
   unreachable, and shows a key when setup is needed. Optionally shows a short
   value beside it: client count, devices online, or WAN latency.
@@ -78,6 +83,7 @@ Settings live inline on the widget's entry in `~/.config/omarchy/shell.json`:
 | `notify` | `true` | notify when the network degrades or recovers |
 | `deviceStats` | `true` | fetch per-device CPU, memory, and uptime (one request per device) |
 | `legacyApi` | `true` | use the controller's internal endpoints for WAN and Wi-Fi details |
+| `demo` | `false` | show a made-up network from the sample fixtures instead of your console |
 
 ### Several consoles
 
@@ -122,6 +128,7 @@ The helper is useful on its own:
 
 ```bash
 bin/unifi status --pretty            # the snapshot the panel renders
+bin/unifi status --demo --pretty     # the made-up network used for screenshots
 bin/unifi raw integration/v1/sites   # any raw API path, for debugging
 bin/unifi forget                     # remove the profile and its key
 ```
@@ -141,13 +148,16 @@ Adding a panel section means two small pieces:
 Run the tests with `./test`. Validate the manifest with
 `omarchy plugin validate .`.
 
-For development, link the checkout into the plugins directory; saving a file
-hot-reloads the plugin:
+For development, link the checkout into the plugins directory:
 
 ```bash
 ln -sfn "$PWD" ~/.config/omarchy/plugins/vcanuel.unifi
 omarchy plugin enable vcanuel.unifi
 ```
+
+The shell does not see edits made through the symlink, so reload QML changes
+with `omarchy restart shell`. Helper changes (`bin/`, `lib/`) apply on the next
+refresh. Set `"demo": true` on the widget to work on the UI without a console.
 
 ## License
 

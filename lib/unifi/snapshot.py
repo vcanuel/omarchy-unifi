@@ -158,3 +158,11 @@ def build_snapshot(profile_name, skip=()):
         if "local" not in skip:
             snapshot["self"] = normalize.build_self(collect_local(), [], {}, [])
         return snapshot
+
+
+def build_demo_snapshot(skip=()):
+    """A snapshot of the made-up network in tests/fixtures/sample."""
+    from . import fixtures
+    collector = Collector("demo", fixtures.DEMO_PROFILE, fixtures.FixtureTransport(), skip,
+                          local_probe=fixtures.local_probe())
+    return collector.collect()

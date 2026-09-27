@@ -1,10 +1,13 @@
 # UniFi for Omarchy
 
+[![Built for Omarchy: Plugin](https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-plugin.svg)](https://plugins.omarchy.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A bar widget for the [Omarchy](https://omarchy.org) shell that answers "is my
 UniFi network OK?" at a glance, with a keyboard-driven panel for details.
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="UniFi panel open from the Omarchy bar, showing internet status, this device's Wi-Fi, and UniFi devices with one access point offline" width="406">
+  <img src="preview.png" alt="UniFi panel open from the Omarchy bar, showing internet status, this device's Wi-Fi, and UniFi devices with one access point offline" width="406">
 </p>
 <p align="center"><sub>Demo data (<code>"demo": true</code>)</sub></p>
 
@@ -45,6 +48,22 @@ Setup asks for the console address (it defaults to your gateway), shows the
 console's certificate fingerprint for you to confirm, and asks for an API key.
 Create one in UniFi Network under **Settings → Control Plane → Integrations**.
 A read-only key is enough.
+
+## Remove
+
+```bash
+~/.config/omarchy/plugins/vcanuel.unifi/bin/unifi forget   # delete the API key and console profile
+omarchy plugin remove vcanuel.unifi
+```
+
+Run `forget` first, while the helper is still installed: it removes the key
+from your keyring and the profile from `~/.config/omarchy-unifi/config.json`.
+With several consoles, repeat it per profile (`bin/unifi --profile office
+forget`). Afterwards, `rm -rf ~/.config/omarchy-unifi ~/.local/state/omarchy-unifi`
+clears what remains (an empty config and the last setup log).
+
+Nothing is installed outside those directories and the plugin folder, and your
+`shell.json` is only touched by Omarchy's own enable and disable commands.
 
 ## Usage
 

@@ -27,7 +27,7 @@ Panel {
   readonly property int maxClients: Math.max(1, parseInt(setting("maxClients", 12), 10) || 12)
   readonly property string barLabelMode: String(setting("barLabel", "none"))
   readonly property bool needsSetup: health === "unconfigured"
-    || (snapshot && snapshot.error && (snapshot.error.kind === "auth" || snapshot.error.kind === "tls"))
+    || (snapshot && snapshot.error && snapshot.error.kind === "auth")
 
   // Keyboard cursor: a section id plus a row index inside it.
   property bool cursorActive: false
@@ -353,14 +353,15 @@ Panel {
             panel: root
             snapshot: root.snapshot
             sectionId: "setup"
-            heading: "SETUP"
+            heading: root.needsSetup ? "SETUP" : "CONNECTION"
             rows: root.needsSetup ? [{
               icon: Model.ICONS.key,
               title: root.health === "unconfigured" ? "Connect to your UniFi console" : Model.errorMessage(root.snapshot.error),
-              subtitle: "Opens a terminal to enter the console address and API key",
+              subtitle: root.health === "unconfigured" ? "Opens a terminal to enter the console address and API key"
+                : "Opens a terminal to check or redo the setup",
               attention: root.health !== "unconfigured",
               action: "setup"
-            }] : []
+            }] : Model.connectionRows(root.snapshot, root.health)
           }
 
           Repeater {

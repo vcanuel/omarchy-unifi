@@ -11,9 +11,11 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "lib"))
 
-from unifi import fixtures, local, normalize  # noqa: E402
+import errno  # noqa: E402
+
+from unifi import config, connect, fixtures, local, normalize, transport  # noqa: E402
 from unifi.errors import UnifiError  # noqa: E402
-from unifi.snapshot import SCHEMA, Collector  # noqa: E402
+from unifi.snapshot import SCHEMA, Collector, drop_away_issues  # noqa: E402
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures")
 
@@ -91,6 +93,13 @@ class SnapshotTest(unittest.TestCase):
         _, transport = collect(skip=("legacy", "stats"))
         self.assertFalse(any("/stat/" in p or "/statistics/" in p for p in transport.requests))
 
+    def test_away_drops_the_not_a_client_note(self):
+        stranger = dict(LOCAL, mac="00:00:00:00:00:99")
+        snap, _ = collect(local_info=stranger)
+        self.assertTrue(any(i["source"] == "self" for i in snap["issues"]))
+        drop_away_issues(snap)
+        self.assertFalse(any(i["source"] == "self" for i in snap["issues"]))
+
     def test_unknown_site_raises(self):
         profile = dict(PROFILE, site="office")
         transport = FakeTransport(os.path.join(FIXTURES, "sample"))
@@ -150,6 +159,84 @@ class LocalTest(unittest.TestCase):
             {"dev": "eth0", "gateway": "10.0.0.1", "metric": 100},
         ]))
         self.assertEqual(route["dev"], "eth0")
+
+
+class FakeProbe:
+    def __init__(self, error=None):
+        self.error = error
+
+    def probe(self, timeout=None):
+        if self.error:
+            raise self.error
+
+
+TWO_WAYS = {"url": "https://192.168.1.1", "tls": "pin", "fingerprint": "sha256:00", "site": "default",
+            "remotes": [{"kind": "cloud", "url": config.cloud_console_url("abc"), "consoleName": "UDM Pro"}]}
+
+
+def choose(profile, failing):
+    def factory(endpoint):
+        if endpoint["name"] in failing:
+            return FakeProbe(failing[endpoint["name"]])
+        return FakeProbe()
+    return connect.choose("default", profile, transport_factory=factory)
+
+
+class ConnectTest(unittest.TestCase):
+    def test_endpoints_keep_order_and_defaults(self):
+        found = config.endpoints(TWO_WAYS)
+        self.assertEqual([e["name"] for e in found], ["local", "cloud"])
+        self.assertEqual(found[1]["tls"], "system")
+        self.assertEqual(found[1]["apiPrefix"], "/proxy/network")
+        self.assertEqual(connect.describe(found[0]), "192.168.1.1")
+        self.assertEqual(connect.describe(found[1]), "UniFi cloud (UDM Pro)")
+
+    def test_cloud_key_has_its_own_slot(self):
+        self.assertEqual(config.key_slot("default"), "default")
+        self.assertEqual(config.key_slot("default", "cloud"), "default@cloud")
+
+    def test_local_wins_when_it_answers(self):
+        endpoint, _, attempts = choose(TWO_WAYS, {})
+        self.assertEqual(endpoint["name"], "local")
+        self.assertTrue(all(a["ok"] for a in attempts))
+
+    def test_falls_back_to_cloud_away_from_home(self):
+        away = UnifiError("unreachable", "cannot reach 192.168.1.1 (no route to host)")
+        endpoint, _, attempts = choose(TWO_WAYS, {"local": away})
+        self.assertEqual(endpoint["kind"], "cloud")
+        self.assertEqual(attempts[0]["error"]["message"], away.message)
+
+    def test_someone_elses_router_is_skipped(self):
+        other = UnifiError("tls", "192.168.1.1 answers with a different certificate than the pinned one")
+        endpoint, _, _ = choose(TWO_WAYS, {"local": other})
+        self.assertEqual(endpoint["kind"], "cloud")
+
+    def test_single_endpoint_failure_keeps_its_kind(self):
+        profile = dict(TWO_WAYS, remotes=[])
+        endpoint, _, attempts = choose(profile, {"local": UnifiError("tls", "x")})
+        self.assertIsNone(endpoint)
+        self.assertEqual(connect.summarize_failure(attempts).kind, "tls")
+
+    def test_all_failing_lists_every_reason(self):
+        endpoint, _, attempts = choose(TWO_WAYS, {
+            "local": UnifiError("unreachable", "cannot reach 192.168.1.1 (timed out)"),
+            "cloud": UnifiError("unconfigured", "no UniFi cloud key in the keyring for profile 'default'"),
+        })
+        self.assertIsNone(endpoint)
+        error = connect.summarize_failure(attempts)
+        self.assertEqual(error.kind, "unreachable")
+        self.assertIn("192.168.1.1: cannot reach", error.message)
+        self.assertIn("UniFi cloud (UDM Pro): no UniFi cloud key", error.message)
+
+    def test_cloud_url_carries_a_base_path(self):
+        t = transport.Transport(config.cloud_console_url("abc"), "k", tls="system")
+        self.assertEqual((t.host, t.base), ("api.ui.com", "/v1/connector/consoles/abc"))
+        self.assertEqual(transport.Transport("https://10.0.0.1", "k", fingerprint="sha256:00").base, "")
+
+    def test_network_errors_read_like_reasons(self):
+        self.assertEqual(transport.describe_network_error(OSError(errno.EHOSTUNREACH, "x")), "no route to host")
+        self.assertEqual(transport.describe_network_error(ConnectionRefusedError()), "connection refused")
+        self.assertEqual(transport.describe_network_error(TimeoutError()), "timed out")
 
 
 if __name__ == "__main__":

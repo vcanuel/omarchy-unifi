@@ -7,6 +7,7 @@ key to a server presenting anything else. Consoles behind a real certificate
 (a custom domain, a reverse proxy) can use normal CA verification instead.
 """
 
+import errno
 import hashlib
 import http.client
 import json
@@ -38,6 +39,29 @@ def split_url(url):
     return parts.hostname, parts.port or 443
 
 
+def base_path(url):
+    """Path every request is prefixed with (the cloud connector has one)."""
+    return urlsplit(str(url or "").strip()).path.rstrip("/")
+
+
+def describe_network_error(exc):
+    """Turn a socket/TLS exception into a short reason a person understands."""
+    if isinstance(exc, socket.gaierror):
+        return "name not resolved"
+    if isinstance(exc, (socket.timeout, TimeoutError)):
+        return "timed out"
+    if isinstance(exc, ConnectionRefusedError):
+        return "connection refused"
+    if isinstance(exc, ssl.SSLError):
+        return "TLS handshake failed (%s)" % (exc.reason or exc)
+    code = getattr(exc, "errno", None)
+    if code in (errno.EHOSTUNREACH, errno.ENETUNREACH):
+        return "no route to host"
+    if code in (errno.ECONNRESET, errno.EPIPE):
+        return "connection reset"
+    return str(exc)
+
+
 def fetch_fingerprint(url, timeout=DEFAULT_TIMEOUT):
     """Return the SHA-256 fingerprint of the certificate the console presents."""
     host, port = split_url(url)
@@ -49,7 +73,7 @@ def fetch_fingerprint(url, timeout=DEFAULT_TIMEOUT):
             with context.wrap_socket(sock, server_hostname=host) as tls:
                 der = tls.getpeercert(binary_form=True)
     except (OSError, ssl.SSLError) as exc:
-        raise UnifiError("unreachable", "cannot reach %s:%d (%s)" % (host, port, exc))
+        raise UnifiError("unreachable", "cannot reach %s:%d (%s)" % (host, port, describe_network_error(exc)))
     return format_fingerprint(hashlib.sha256(der).hexdigest())
 
 
@@ -62,6 +86,7 @@ class Transport:
 
     def __init__(self, url, api_key, tls="pin", fingerprint=None, timeout=DEFAULT_TIMEOUT):
         self.host, self.port = split_url(url)
+        self.base = base_path(url)
         self.api_key = api_key
         self.tls = tls
         self.fingerprint = normalize_fingerprint(fingerprint)
@@ -77,24 +102,32 @@ class Transport:
         context.verify_mode = ssl.CERT_NONE
         return context
 
-    def _connect(self):
-        conn = http.client.HTTPSConnection(self.host, self.port, timeout=self.timeout, context=self._context())
+    def _connect(self, timeout=None):
+        conn = http.client.HTTPSConnection(self.host, self.port, timeout=timeout or self.timeout,
+                                           context=self._context())
         try:
             conn.connect()
         except ssl.SSLCertVerificationError as exc:
             conn.close()
-            raise UnifiError("tls", "certificate rejected: %s" % exc.verify_message)
+            raise UnifiError("tls", "certificate of %s rejected: %s" % (self.host, exc.verify_message))
         except (OSError, ssl.SSLError) as exc:
             conn.close()
-            raise UnifiError("unreachable", "cannot reach %s (%s)" % (self.host, exc))
+            raise UnifiError("unreachable", "cannot reach %s (%s)" % (self.host, describe_network_error(exc)))
         if self.tls == "pin":
             der = conn.sock.getpeercert(binary_form=True)
             if hashlib.sha256(der).hexdigest() != self.fingerprint:
                 conn.close()
-                raise UnifiError("tls", "console certificate changed; run setup again if this is expected")
+                # Off the home network, a private address like 192.168.1.1 is
+                # often someone else's router: say so rather than "changed".
+                raise UnifiError("tls", "%s answers with a different certificate than the pinned one" % self.host)
         return conn
 
+    def probe(self, timeout=None):
+        """Connect and check the certificate without sending the API key."""
+        self._connect(timeout).close()
+
     def get_json(self, path):
+        path = self.base + path
         conn = self._connect()
         try:
             conn.request("GET", path, headers={
@@ -104,12 +137,14 @@ class Transport:
             response = conn.getresponse()
             body = response.read()
         except (OSError, http.client.HTTPException) as exc:
-            raise UnifiError("unreachable", "request to %s failed (%s)" % (path, exc))
+            raise UnifiError("unreachable", "request to %s failed (%s)" % (path, describe_network_error(exc)))
         finally:
             conn.close()
 
         if response.status in (401, 403):
-            raise UnifiError("auth", "API key rejected (HTTP %d)" % response.status, response.status)
+            raise UnifiError("auth", "API key rejected by %s (HTTP %d)" % (self.host, response.status), response.status)
+        if response.status == 429:
+            raise UnifiError("http", "%s is rate limiting requests (HTTP 429)" % self.host, 429)
         if response.status >= 400:
             raise UnifiError("http", "%s returned HTTP %d" % (path, response.status), response.status)
         try:

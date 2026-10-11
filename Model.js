@@ -86,6 +86,17 @@ function heroMeta(snapshot, state) {
   if (state === "loading") return "Checking the network…"
   if (state === "unconfigured") return "Not set up yet"
   if (state === "down" || state === "stale") return errorMessage(snapshot && snapshot.error)
+  return healthText(snapshot) + viaSuffix(snapshot)
+}
+
+// " · via UniFi cloud" when the console is not reached at its main address.
+function viaSuffix(snapshot) {
+  var c = snapshot && snapshot.connection
+  if (!c || !c.via || c.via === "local") return ""
+  return " · via " + (c.via === "cloud" ? "UniFi cloud" : c.label)
+}
+
+function healthText(snapshot) {
   var issues = (snapshot && snapshot.issues) || []
   var first = null
   for (var i = 0; i < issues.length; i++) {
@@ -107,9 +118,47 @@ function countSeverity(issues, severity) {
 function errorMessage(error) {
   if (!error) return "Console unreachable"
   if (error.kind === "auth") return "API key rejected — run setup again"
-  if (error.kind === "tls") return "Certificate changed — run setup again"
-  if (error.kind === "unreachable") return "Console unreachable"
+  if (error.kind === "tls") return "Unexpected certificate — not your console?"
+  if (error.kind === "unreachable") return "Console unreachable from this network"
   return String(error.message || "Console error")
+}
+
+// The reason part of "cannot reach 192.168.1.1 (no route to host)".
+function attemptReason(attempt) {
+  var e = attempt && attempt.error
+  if (!e) return ""
+  if (e.kind === "tls") return "another device answers here"
+  var m = /\(([^()]*)\)\s*$/.exec(String(e.message || ""))
+  return m ? m[1] : String(e.message || "")
+}
+
+// Rows for the panel's CONNECTION section: shown when the console cannot be
+// reached, so the user sees what was tried and can fix it in one keypress.
+function connectionRows(snapshot, state) {
+  if (state !== "down" && state !== "stale") return []
+  var c = snapshot && snapshot.connection
+  var attempts = (c && c.attempts) || []
+  var rows = []
+  for (var i = 0; i < attempts.length; i++) {
+    var a = attempts[i]
+    rows.push({
+      icon: a.kind === "cloud" ? ICONS.internet : (a.ok ? ICONS.network : ICONS.offline),
+      title: a.label,
+      subtitle: a.ok ? "answers, but the request failed" : attemptReason(a),
+      trailing: a.ok && a.ms !== null && a.ms !== undefined ? a.ms + " ms" : "",
+      attention: !a.ok,
+      copy: { ip: a.label },
+      action: "setup"
+    })
+  }
+  var remote = attempts.some(function(a) { return a.name !== "local" })
+  rows.push({
+    icon: ICONS.key,
+    title: remote ? "Change connections" : "Reach it from anywhere",
+    subtitle: remote ? "Add, test, or remove connections" : "Add UniFi cloud or a VPN address",
+    action: "setup"
+  })
+  return rows
 }
 
 // Short text beside the bar icon, chosen by the `barLabel` setting.

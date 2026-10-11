@@ -15,7 +15,7 @@ import errno  # noqa: E402
 
 from unifi import config, connect, fixtures, local, normalize, transport  # noqa: E402
 from unifi.errors import UnifiError  # noqa: E402
-from unifi.snapshot import SCHEMA, Collector  # noqa: E402
+from unifi.snapshot import SCHEMA, Collector, drop_away_issues  # noqa: E402
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures")
 
@@ -92,6 +92,13 @@ class SnapshotTest(unittest.TestCase):
     def test_skip_avoids_requests(self):
         _, transport = collect(skip=("legacy", "stats"))
         self.assertFalse(any("/stat/" in p or "/statistics/" in p for p in transport.requests))
+
+    def test_away_drops_the_not_a_client_note(self):
+        stranger = dict(LOCAL, mac="00:00:00:00:00:99")
+        snap, _ = collect(local_info=stranger)
+        self.assertTrue(any(i["source"] == "self" for i in snap["issues"]))
+        drop_away_issues(snap)
+        self.assertFalse(any(i["source"] == "self" for i in snap["issues"]))
 
     def test_unknown_site_raises(self):
         profile = dict(PROFILE, site="office")

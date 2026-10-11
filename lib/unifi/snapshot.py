@@ -159,6 +159,12 @@ def endpoint_profile(profile, endpoint):
     return view
 
 
+def drop_away_issues(snapshot):
+    """Reached through a remote connection, this machine is elsewhere by
+    definition; "not a client of this site" is expected, not news."""
+    snapshot["issues"] = [i for i in snapshot["issues"] if i.get("source") != "self"]
+
+
 def build_snapshot(profile_name, skip=(), chooser=connect.choose):
     """Return a snapshot; failures become status "down"/"unconfigured", never raise."""
     skip = set(skip)
@@ -173,6 +179,8 @@ def build_snapshot(profile_name, skip=(), chooser=connect.choose):
             # every refresh is not worth it.
             skip.add("stats")
         snapshot = Collector(profile_name, endpoint_profile(profile, endpoint), transport, skip).collect()
+        if endpoint["name"] != "local":
+            drop_away_issues(snapshot)
     except UnifiError as exc:
         snapshot = empty_snapshot(profile_name)
         snapshot["status"] = "unconfigured" if exc.kind == "unconfigured" else "down"

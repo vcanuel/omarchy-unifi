@@ -85,3 +85,34 @@ test("skip args", () => {
   assert.deepEqual(Array.from(Model.skipArgs(true, true)), [])
   assert.deepEqual(Array.from(Model.skipArgs(false, false)), ["--skip", "stats,legacy"])
 })
+
+test("unreachable console explains what was tried", () => {
+  const snap = {
+    status: "down",
+    error: { kind: "unreachable", message: "cannot reach 192.168.1.1 (no route to host)" },
+    connection: { via: null, label: "", attempts: [
+      { name: "local", kind: "direct", label: "192.168.1.1", ok: false, ms: 3,
+        error: { kind: "unreachable", message: "cannot reach 192.168.1.1 (no route to host)" } },
+    ] },
+  }
+  assert.equal(Model.heroMeta(snap, "down"), "Console unreachable from this network")
+  const rows = Model.connectionRows(snap, "down")
+  assert.equal(rows[0].title, "192.168.1.1")
+  assert.equal(rows[0].subtitle, "no route to host")
+  assert.equal(rows[1].title, "Reach it from anywhere")
+  assert.equal(rows[1].action, "setup")
+  assert.equal(Model.connectionRows(snap, "ok").length, 0)
+})
+
+test("a foreign router at the same address is named as such", () => {
+  const attempt = { error: { kind: "tls", message: "192.168.1.1 answers with a different certificate than the pinned one" } }
+  assert.equal(Model.attemptReason(attempt), "another device answers here")
+})
+
+test("hero says when the cloud is in use", () => {
+  const snap = Model.parseSnapshot(sampleSnapshot()).snapshot
+  snap.connection = { via: "cloud", label: "UniFi cloud", attempts: [] }
+  assert.equal(Model.heroMeta(snap, "warning"), "AP Garage is offline · via UniFi cloud")
+  snap.connection.via = "local"
+  assert.equal(Model.heroMeta(snap, "warning"), "AP Garage is offline")
+})

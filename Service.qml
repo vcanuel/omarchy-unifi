@@ -66,6 +66,7 @@ Item {
       var kept = snapshot
       kept.error = next.error
       kept.status = "down"
+      kept.connection = next.connection
       snapshot = null
       snapshot = kept
     } else {

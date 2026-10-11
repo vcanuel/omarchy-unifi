@@ -8,12 +8,11 @@ changes that would break an existing reader.
 import datetime
 from concurrent.futures import ThreadPoolExecutor
 
-from . import normalize
+from . import connect, normalize
 from .api import IntegrationApi, LegacyApi
-from .config import get_profile, read_api_key
+from .config import CLOUD_CONSOLE_URL, get_profile
 from .errors import UnifiError
 from .local import collect_local
-from .transport import Transport
 
 SCHEMA = 1
 SOURCES = ("stats", "legacy", "local")
@@ -30,6 +29,7 @@ def empty_snapshot(profile_name):
         "profile": profile_name,
         "status": "ok",
         "error": None,
+        "connection": None,
         "console": None,
         "site": None,
         "summary": None,
@@ -131,7 +131,7 @@ class Collector:
         status, issues = normalize.evaluate(devices, wan, self_info)
         snapshot.update({
             "status": status,
-            "console": {"url": self.profile["url"], "name": self.profile.get("name") or "",
+            "console": {"url": self.profile.get("consoleUrl") or self.profile.get("url") or "", "name": self.profile.get("name") or "",
                         "networkVersion": info.get("applicationVersion") or ""},
             "site": {"id": site_id, "name": site.get("name") or site_ref, "ref": site_ref},
             "summary": normalize.summarize(devices, clients),
@@ -144,20 +144,43 @@ class Collector:
         return snapshot
 
 
-def build_snapshot(profile_name, skip=()):
+def connection_info(endpoint, attempts):
+    return {
+        "via": endpoint["kind"] if endpoint and endpoint["kind"] == "cloud" else (endpoint or {}).get("name"),
+        "label": connect.describe(endpoint) if endpoint else "",
+        "attempts": attempts,
+    }
+
+
+def endpoint_profile(profile, endpoint):
+    """The profile as seen through one endpoint: its prefix and console link."""
+    view = dict(profile, apiPrefix=endpoint["apiPrefix"])
+    view["consoleUrl"] = CLOUD_CONSOLE_URL if endpoint["kind"] == "cloud" else endpoint["url"]
+    return view
+
+
+def build_snapshot(profile_name, skip=(), chooser=connect.choose):
     """Return a snapshot; failures become status "down"/"unconfigured", never raise."""
+    skip = set(skip)
+    endpoint, attempts = None, []
     try:
         profile = get_profile(profile_name)
-        transport = Transport(profile["url"], read_api_key(profile_name), tls=profile["tls"],
-                              fingerprint=profile.get("fingerprint"))
-        return Collector(profile_name, profile, transport, skip).collect()
+        endpoint, transport, attempts = chooser(profile_name, profile)
+        if not endpoint:
+            raise connect.summarize_failure(attempts)
+        if endpoint["kind"] == "cloud":
+            # The cloud connector is rate limited; one request per device
+            # every refresh is not worth it.
+            skip.add("stats")
+        snapshot = Collector(profile_name, endpoint_profile(profile, endpoint), transport, skip).collect()
     except UnifiError as exc:
         snapshot = empty_snapshot(profile_name)
         snapshot["status"] = "unconfigured" if exc.kind == "unconfigured" else "down"
         snapshot["error"] = exc.to_json()
         if "local" not in skip:
             snapshot["self"] = normalize.build_self(collect_local(), [], {}, [])
-        return snapshot
+    snapshot["connection"] = connection_info(endpoint, attempts)
+    return snapshot
 
 
 def build_demo_snapshot(skip=()):
@@ -165,4 +188,6 @@ def build_demo_snapshot(skip=()):
     from . import fixtures
     collector = Collector("demo", fixtures.DEMO_PROFILE, fixtures.FixtureTransport(), skip,
                           local_probe=fixtures.local_probe())
-    return collector.collect()
+    snapshot = collector.collect()
+    snapshot["connection"] = {"via": "local", "label": "192.168.1.1", "attempts": []}
+    return snapshot

@@ -49,6 +49,30 @@ console's certificate fingerprint for you to confirm, and asks for an API key.
 Create one in UniFi Network under **Settings → Control Plane → Integrations**.
 A read-only key is enough.
 
+Running `setup` again on a configured profile opens a menu: test the
+connection, change the local address or key, or add and remove remote
+connections.
+
+### Away from home
+
+A console on `192.168.1.1` cannot be reached from a café's Wi-Fi. Add a
+remote connection and the widget switches by itself: on every refresh it
+probes each connection at once (TLS and the pinned certificate only, the key
+is not sent) and uses the first one, in order, that answers. The local
+address always comes first, so at home nothing changes.
+
+- **UniFi cloud**: goes through `api.ui.com` (Site Manager connector), so it
+  works wherever the console is online. It needs a separate API key created
+  at **unifi.ui.com → API** and UniFi OS 5.0.3 or later. Per-device CPU and
+  memory are skipped over the cloud to stay within its rate limits.
+- **Another address**: a VPN or Tailscale IP, a DNS name, or a port forward
+  that leads to the same console. It uses the console's key; a self-signed
+  certificate is pinned like the local one.
+
+When nothing answers, the panel's **Connection** section lists each address
+with the reason (`no route to host`, `timed out`, `another device answers
+here`…), and `bin/unifi check` prints the same thing in a terminal.
+
 ## Remove
 
 ```bash
@@ -56,7 +80,7 @@ A read-only key is enough.
 omarchy plugin remove vcanuel.unifi
 ```
 
-Run `forget` first, while the helper is still installed: it removes the key
+Run `forget` first, while the helper is still installed: it removes the keys
 from your keyring and the profile from `~/.config/omarchy-unifi/config.json`.
 With several consoles, repeat it per profile (`bin/unifi --profile office
 forget`). Afterwards, `rm -rf ~/.config/omarchy-unifi ~/.local/state/omarchy-unifi`
@@ -119,7 +143,8 @@ bin/unifi --profile office setup
 
 ## Security
 
-- The API key is stored in the desktop keyring, never in a file. Omarchy
+- API keys (the console's, and the UniFi cloud one if you add it) are stored
+  in the desktop keyring, never in a file. Omarchy
   plugins share one QML scene, so the key is also kept out of QML entirely:
   the panel only ever sees the helper's JSON output.
 - UniFi consoles use self-signed certificates. Instead of disabling
@@ -148,6 +173,7 @@ The helper is useful on its own:
 ```bash
 bin/unifi status --pretty            # the snapshot the panel renders
 bin/unifi status --demo --pretty     # the made-up network used for screenshots
+bin/unifi check                      # which connections answer, and why the others do not
 bin/unifi raw integration/v1/sites   # any raw API path, for debugging
 bin/unifi forget                     # remove the profile and its key
 ```

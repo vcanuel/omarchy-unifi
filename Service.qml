@@ -102,9 +102,14 @@ Item {
     Quickshell.execDetached(["omarchy-launch-webapp", url])
   }
 
+  // The terminal is detached, so nothing here sees setup finish. Ask the
+  // widget to refresh once it does, or it keeps showing the key until the
+  // next timer tick and a second click runs setup again. The exit code is
+  // kept so the presentation wrapper still sees a Ctrl-C (130).
   function runSetup() {
     Quickshell.execDetached(["omarchy-launch-floating-terminal-with-presentation",
-      Util.shellQuote(helperPath) + " --profile " + Util.shellQuote(profile) + " setup"])
+      Util.shellQuote(helperPath) + " --profile " + Util.shellQuote(profile) + " setup"
+      + "; rc=$?; omarchy-shell -q vcanuel.unifi refresh; (exit $rc)"])
   }
 
   function copy(text) {

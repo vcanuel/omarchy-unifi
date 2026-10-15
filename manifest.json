@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "vcanuel.unifi",
   "name": "UniFi",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Vincent Canuel",
   "license": "MIT",
   "description": "UniFi network health in the Omarchy bar: internet, this device's Wi-Fi, UniFi devices, and connected clients.",
